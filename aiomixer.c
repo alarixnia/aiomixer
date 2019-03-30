@@ -48,7 +48,7 @@
 #define PAIR_SLIDER		(3)
 #define PAIR_ENUM_SET		(4)
 
-struct cmixer_control {
+struct aiomixer_control {
 	char name[MAX_CONTROL_LEN];
 	int dev;
 	int type;
@@ -66,16 +66,16 @@ struct cmixer_control {
 	};
 };
 
-struct cmixer_class {
+struct aiomixer_class {
 	char name[MAX_AUDIO_DEV_LEN];
 	int id;
 	unsigned ncontrols;
-	struct cmixer_control controls[MAX_CONTROLS];
+	struct aiomixer_control controls[MAX_CONTROLS];
 };
 
-struct cmixer {
+struct aiomixer {
 	unsigned nclasses;
-	struct cmixer_class classes[MAX_CLASSES];
+	struct aiomixer_class classes[MAX_CLASSES];
 	unsigned class_index;
 	unsigned control_index;
 	CDKSCREEN *screen;
@@ -83,35 +83,35 @@ struct cmixer {
 	int fd;
 };
 
-static void select_class(struct cmixer *);
-static void select_class_widget(struct cmixer *, int);
-static struct cmixer_class *cmixer_get_class(struct cmixer *, int);
-static void cmixer_devinfo(struct cmixer *);
+static void select_class(struct aiomixer *);
+static void select_class_widget(struct aiomixer *, int);
+static struct aiomixer_class *aiomixer_get_class(struct aiomixer *, int);
+static void aiomixer_devinfo(struct aiomixer *);
 static char **make_enum_list(struct audio_mixer_enum *);
 static char **make_set_list(struct audio_mixer_set *);
 static size_t sum_str_list_lengths(const char **, size_t);
-static void create_class_widgets(struct cmixer *, int);
-static void destroy_class_widgets(struct cmixer *);
-static void enum_get_and_select(int, struct cmixer_control *);
-static void set_get_and_select(int, struct cmixer_control *);
-static void levels_get_and_set(int, struct cmixer_control *);
+static void create_class_widgets(struct aiomixer *, int);
+static void destroy_class_widgets(struct aiomixer *);
+static void enum_get_and_select(int, struct aiomixer_control *);
+static void set_get_and_select(int, struct aiomixer_control *);
+static void levels_get_and_set(int, struct aiomixer_control *);
 static void set_enum(int, int, int);
 static void set_set(int, int, int);
-static void set_level(int, struct cmixer_control *, int, int);
+static void set_level(int, struct aiomixer_control *, int, int);
 static int key_callback_slider(EObjectType, void *, void *, chtype);
 static int key_callback_class_buttons(EObjectType, void *, void *, chtype);
 static int key_callback_control_buttons(EObjectType, void *, void *, chtype);
 static int key_callback_global(EObjectType, void *, void *, chtype);
-static void add_directional_binds(struct cmixer *, EObjectType, void *, BINDFN);
-static void add_slider_binds(struct cmixer *, void *);
-static void add_class_button_binds(struct cmixer *, void *);
-static void add_control_button_binds(struct cmixer *, void *);
-static void add_global_binds(struct cmixer *, EObjectType, void *);
+static void add_directional_binds(struct aiomixer *, EObjectType, void *, BINDFN);
+static void add_slider_binds(struct aiomixer *, void *);
+static void add_class_button_binds(struct aiomixer *, void *);
+static void add_control_button_binds(struct aiomixer *, void *);
+static void add_global_binds(struct aiomixer *, EObjectType, void *);
 static void usage(void);
-static void quit(struct cmixer *);
+static void quit(struct aiomixer *);
 
-static struct cmixer_class *
-cmixer_get_class(struct cmixer *x, int class_id)
+static struct aiomixer_class *
+aiomixer_get_class(struct aiomixer *x, int class_id)
 {
 	for (unsigned i = 0; i < x->nclasses; ++i) {
 		if (x->classes[i].id == class_id) {
@@ -122,11 +122,11 @@ cmixer_get_class(struct cmixer *x, int class_id)
 }
 
 static void
-cmixer_devinfo(struct cmixer *x)
+aiomixer_devinfo(struct aiomixer *x)
 {
 	struct mixer_devinfo m = {0};
-	struct cmixer_class *class = NULL;
-	struct cmixer_control *control = NULL;
+	struct aiomixer_class *class = NULL;
+	struct aiomixer_control *control = NULL;
 	struct audio_mixer_enum e;
 	struct audio_mixer_set s;
 	struct audio_mixer_value v;
@@ -143,7 +143,7 @@ cmixer_devinfo(struct cmixer *x)
 			break;
 		case AUDIO_MIXER_ENUM:
 			e = m.un.e;
-			class = cmixer_get_class(x, m.mixer_class);
+			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
 				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
@@ -158,7 +158,7 @@ cmixer_devinfo(struct cmixer *x)
 			break;
 		case AUDIO_MIXER_SET:
 			s = m.un.s;
-			class = cmixer_get_class(x, m.mixer_class);
+			class = aiomixer_get_class(x, m.mixer_class);
 			for (i = 0; i < s.num_mem; ++i) {
 				puts(s.member[i].label.name);
 			}
@@ -176,7 +176,7 @@ cmixer_devinfo(struct cmixer *x)
 			break;
 		case AUDIO_MIXER_VALUE:
 			v = m.un.v;
-			class = cmixer_get_class(x, m.mixer_class);
+			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
 				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
@@ -224,7 +224,7 @@ sum_str_list_lengths(const char **list, size_t n)
 }
 
 static void
-enum_get_and_select(int fd, struct cmixer_control *control)
+enum_get_and_select(int fd, struct aiomixer_control *control)
 {
 	mixer_ctrl_t dev = {0};
 
@@ -241,7 +241,7 @@ enum_get_and_select(int fd, struct cmixer_control *control)
 }
 
 static void
-set_get_and_select(int fd, struct cmixer_control *control)
+set_get_and_select(int fd, struct aiomixer_control *control)
 {
 	mixer_ctrl_t dev = {0};
 
@@ -258,7 +258,7 @@ set_get_and_select(int fd, struct cmixer_control *control)
 }
 
 static void
-levels_get_and_set(int fd, struct cmixer_control *control)
+levels_get_and_set(int fd, struct aiomixer_control *control)
 {
 	mixer_ctrl_t dev = {0};
 
@@ -291,7 +291,7 @@ set_set(int fd, int dev_id, int mask)
 }
 
 static void 
-add_global_binds(struct cmixer *x, EObjectType type, void *object)
+add_global_binds(struct aiomixer *x, EObjectType type, void *object)
 {
 	unsigned int i;
 
@@ -302,7 +302,7 @@ add_global_binds(struct cmixer *x, EObjectType type, void *object)
 }
 
 static void
-add_directional_binds(struct cmixer *x, EObjectType type, void *object, BINDFN fn)
+add_directional_binds(struct aiomixer *x, EObjectType type, void *object, BINDFN fn)
 {
 	bindCDKObject(type, object, KEY_UP, fn, x);
 	bindCDKObject(type, object, KEY_DOWN, fn, x);
@@ -311,7 +311,7 @@ add_directional_binds(struct cmixer *x, EObjectType type, void *object, BINDFN f
 }
 
 static void
-add_slider_binds(struct cmixer *x, void *object)
+add_slider_binds(struct aiomixer *x, void *object)
 {
 	add_global_binds(x, vSLIDER, object);
 	add_directional_binds(x, vSLIDER, object, key_callback_slider);
@@ -320,25 +320,25 @@ add_slider_binds(struct cmixer *x, void *object)
 }
 
 static void
-add_class_button_binds(struct cmixer *x, void *object)
+add_class_button_binds(struct aiomixer *x, void *object)
 {
 	add_global_binds(x, vBUTTONBOX, object);
 	add_directional_binds(x, vBUTTONBOX, object, key_callback_class_buttons);
 }
 
 static void
-add_control_button_binds(struct cmixer *x, void *object)
+add_control_button_binds(struct aiomixer *x, void *object)
 {
 	add_global_binds(x, vBUTTONBOX, object);
 	add_directional_binds(x, vBUTTONBOX, object, key_callback_control_buttons);
 }
 
 static void
-create_class_widgets(struct cmixer *x, int y)
+create_class_widgets(struct aiomixer *x, int y)
 {
 	char label[32];
-	struct cmixer_class *class = &x->classes[x->class_index];
-	struct cmixer_control *control;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	struct aiomixer_control *control;
 	char **list;
 	unsigned i;
 	int width;
@@ -410,10 +410,10 @@ create_class_widgets(struct cmixer *x, int y)
 }
 
 static void
-destroy_class_widgets(struct cmixer *x)
+destroy_class_widgets(struct aiomixer *x)
 {
-	struct cmixer_class *class = &x->classes[x->class_index];
-	struct cmixer_control *control;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	struct aiomixer_control *control;
 	unsigned i;
 
 	for (i = 0; i < class->ncontrols; ++i) {
@@ -438,10 +438,10 @@ destroy_class_widgets(struct cmixer *x)
 }
 
 static void
-select_class_widget(struct cmixer *x, int index)
+select_class_widget(struct aiomixer *x, int index)
 {
-	struct cmixer_class *class = &x->classes[x->class_index];
-	struct cmixer_control *control;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	struct aiomixer_control *control;
 	int result;
 
 	if (index < 0 || class->ncontrols < 1) {
@@ -492,7 +492,7 @@ select_class_widget(struct cmixer *x, int index)
 }
 
 static void
-select_class(struct cmixer *x)
+select_class(struct aiomixer *x)
 {
 	int result;
 
@@ -509,7 +509,7 @@ select_class(struct cmixer *x)
 }
 
 static void
-set_level(int fd, struct cmixer_control *control, int level, int channel)
+set_level(int fd, struct aiomixer_control *control, int level, int channel)
 {
 	mixer_ctrl_t dev = {0};
 	int i;
@@ -534,9 +534,9 @@ set_level(int fd, struct cmixer_control *control, int level, int channel)
 static int key_callback_slider(EObjectType cdktype,
 	void *object, void *clientData, chtype key)
 {
-	struct cmixer *x = clientData;
-	struct cmixer_class *class = &x->classes[x->class_index];
-	struct cmixer_control *control = &class->controls[x->control_index];
+	struct aiomixer *x = clientData;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	struct aiomixer_control *control = &class->controls[x->control_index];
 	CDKSLIDER *widget = control->value_widget[control->current_chan];
 	int new_value;
 
@@ -586,7 +586,7 @@ static int key_callback_slider(EObjectType cdktype,
 static int key_callback_class_buttons(EObjectType cdktype,
 	void *object, void *clientData, chtype key)
 {
-	struct cmixer *x = clientData;
+	struct aiomixer *x = clientData;
 
 	switch (key) {
 	case '\e':
@@ -614,9 +614,9 @@ static int key_callback_class_buttons(EObjectType cdktype,
 static int key_callback_control_buttons(EObjectType cdktype,
 	void *object, void *clientData, chtype key)
 {
-	struct cmixer *x = clientData;
-	struct cmixer_class *class = &x->classes[x->class_index];
-	struct cmixer_control *control = &class->controls[x->control_index];
+	struct aiomixer *x = clientData;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	struct aiomixer_control *control = &class->controls[x->control_index];
 	CDKBUTTONBOX *widget = NULL;
 	int current;
 
@@ -656,7 +656,7 @@ static int key_callback_control_buttons(EObjectType cdktype,
 static int key_callback_global(EObjectType cdktype,
 	void *object, void *clientData, chtype key)
 {
-	struct cmixer *x = clientData;
+	struct aiomixer *x = clientData;
 
 	if (key > KEY_F0 && key <= (KEY_F0 + x->nclasses + 1)) {
 		key = key - KEY_F0 - 1;
@@ -682,12 +682,12 @@ static int key_callback_global(EObjectType cdktype,
 static void
 usage(void)
 {
-	fputs("cmixer [-d device]\n", stderr);
+	fputs("aiomixer [-d device]\n", stderr);
 	exit(1);
 }
 
 static void
-quit(struct cmixer *x)
+quit(struct aiomixer *x)
 {
 	destroyCDKScreen(x->screen);
 	endCDK();
@@ -698,7 +698,7 @@ quit(struct cmixer *x)
 int
 main(int argc, char *argv[])
 {
-	struct cmixer x = {0};
+	struct aiomixer x = {0};
 	char *title[] = { "AudioIO Mixer" };
 	char *mixer_device = DEFAULT_MIXER_DEVICE;
 	int ch;
@@ -723,7 +723,7 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	cmixer_devinfo(&x);
+	aiomixer_devinfo(&x);
 
 	char **class_names = calloc(sizeof(char *), x.nclasses);
 	for (unsigned i = 0; i < x.nclasses; ++i) {

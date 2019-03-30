@@ -6,13 +6,13 @@ CFLAGS+=	-Wall
 LIBS+=		`cdk5-config --libs`
 LIBS+=		`ncurses6-config --libs`
 
-all: cmixer
+all: aiomixer
 
-cmixer: cmixer.o
-	$(CC) $(LDFLAGS) cmixer.o $(LIBS) -o cmixer
+aiomixer: aiomixer.o
+	$(CC) $(LDFLAGS) aiomixer.o $(LIBS) -o aiomixer
 
-cmixer.o:
-	$(CC) $(CFLAGS) -c cmixer.c -o cmixer.o
+aiomixer.o:
+	$(CC) $(CFLAGS) -c aiomixer.c -o aiomixer.o
 
 clean:
-	rm -f *.o cmixer
+	rm -f *.o aiomixer
