@@ -521,6 +521,7 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 			drawCDKSlider(control->value_widget[i], false);
 		}
 	} else {
+		(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
 		dev.un.value.level[channel] = level;
 		setCDKSliderValue(control->value_widget[channel], level);
 		drawCDKSlider(control->value_widget[channel], false);
@@ -563,14 +564,14 @@ static int key_callback_slider(EObjectType cdktype ,
 		if (new_value < getCDKSliderLowValue(widget)) {
 			new_value = getCDKSliderLowValue(widget);
 		}
-		set_level(x->fd, control, new_value, x->control_index);
+		set_level(x->fd, control, new_value, control->current_chan);
 		break;
 	case KEY_RIGHT:
 		new_value = getCDKSliderValue(widget) + control->v.delta;
 		if (new_value > getCDKSliderHighValue(widget)) {
 			new_value = getCDKSliderHighValue(widget);
 		}
-		set_level(x->fd, control, new_value, x->control_index);
+		set_level(x->fd, control, new_value, control->current_chan);
 		break;
 	case 'u':
 		control->chans_unlocked = !control->chans_unlocked;
