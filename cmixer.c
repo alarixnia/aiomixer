@@ -135,7 +135,6 @@ cmixer_devinfo(struct cmixer *x)
 	for (m.index = 0; ioctl(x->fd, AUDIO_MIXER_DEVINFO, &m) != -1; ++m.index) {
 		switch (m.type) {
 		case AUDIO_MIXER_CLASS:
-			printf("class: %s, %d\n", m.label.name, m.mixer_class);
 			if (x->nclasses < MAX_CLASSES) {
 				class = &x->classes[x->nclasses++];
 				class->id = m.mixer_class;
@@ -145,7 +144,6 @@ cmixer_devinfo(struct cmixer *x)
 		case AUDIO_MIXER_ENUM:
 			e = m.un.e;
 			class = cmixer_get_class(x, m.mixer_class);
-			printf("enum: %s, %d\n", m.label.name, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
 				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
@@ -155,15 +153,12 @@ cmixer_devinfo(struct cmixer *x)
 				for (i = 0; i < e.num_mem; ++i) {
 					control->e.member[i].label = e.member[i].label;
 					control->e.member[i].ord = e.member[i].ord;
-					printf("label: %s, ord: %d\n",
-						e.member[i].label.name, e.member[i].ord);
 				}
 			}
 			break;
 		case AUDIO_MIXER_SET:
 			s = m.un.s;
 			class = cmixer_get_class(x, m.mixer_class);
-			printf("set: %s, %d\n", m.label.name, m.mixer_class);
 			for (i = 0; i < s.num_mem; ++i) {
 				puts(s.member[i].label.name);
 			}
@@ -176,16 +171,12 @@ cmixer_devinfo(struct cmixer *x)
 				for (i = 0; i < s.num_mem; ++i) {
 					control->s.member[i].label = s.member[i].label;
 					control->s.member[i].mask = s.member[i].mask;
-					printf("label: %s, mask: %d\n",
-						e.member[i].label.name, e.member[i].ord);
 				}
 			}
 			break;
 		case AUDIO_MIXER_VALUE:
 			v = m.un.v;
 			class = cmixer_get_class(x, m.mixer_class);
-			printf("value: %s, %d\n", m.label.name, m.mixer_class);
-			printf("channels: %d, delta: %d\n", v.num_channels, v.delta);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
 				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
@@ -307,6 +298,7 @@ add_global_binds(struct cmixer *x, EObjectType type, void *object)
 	for (i = 1; i <= x->nclasses; ++i) {
 		bindCDKObject(type, object, KEY_F0 + i, key_callback_global, x);
 	}
+	bindCDKObject(type, object, KEY_RESIZE, key_callback_global, x);
 }
 
 static void
@@ -675,6 +667,14 @@ static int key_callback_global(EObjectType cdktype,
 		create_class_widgets(x, 3);
 		select_class_widget(x, 0);
 		return false;
+	}
+	switch (key) {
+	case KEY_RESIZE:
+		destroy_class_widgets(x);
+		drawCDKButtonboxButtons(x->class_buttons);
+		create_class_widgets(x, 3);
+		select_class_widget(x, 0);
+		break;
 	}
 	return false;
 }
