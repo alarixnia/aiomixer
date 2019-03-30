@@ -1,7 +1,7 @@
 CFLAGS+=	`ncurses6-config --cflags`
 CFLAGS+=	-I`cdk5-config --prefix`/include
 
-CFLAGS+=	-Wall
+CFLAGS+=	-Wall -Wextra -Wpedantic -std=c11
 
 LIBS+=		`cdk5-config --libs`
 LIBS+=		`ncurses6-config --libs`

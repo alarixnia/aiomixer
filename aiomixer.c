@@ -159,9 +159,6 @@ aiomixer_devinfo(struct aiomixer *x)
 		case AUDIO_MIXER_SET:
 			s = m.un.s;
 			class = aiomixer_get_class(x, m.mixer_class);
-			for (i = 0; i < s.num_mem; ++i) {
-				puts(s.member[i].label.name);
-			}
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
 				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
@@ -324,6 +321,7 @@ add_class_button_binds(struct aiomixer *x, void *object)
 {
 	add_global_binds(x, vBUTTONBOX, object);
 	add_directional_binds(x, vBUTTONBOX, object, key_callback_class_buttons);
+	bindCDKObject(vBUTTONBOX, object, 0x1b /* \e */, key_callback_class_buttons, x);
 }
 
 static void
@@ -448,7 +446,7 @@ select_class_widget(struct aiomixer *x, int index)
 		select_class(x);
 		return;
 	}
-	if (index >= class->ncontrols) {
+	if ((unsigned)index >= class->ncontrols) {
 		select_class_widget(x, 0);
 		return;
 	}
@@ -499,7 +497,7 @@ select_class(struct aiomixer *x)
 	result = activateCDKButtonbox(x->class_buttons, false);
 	destroy_class_widgets(x);
 	if (result != -1) {
-		if (result != x->class_index) {
+		if ((unsigned)result != x->class_index) {
 			x->control_index = 0;
 		}
 		x->class_index = (unsigned)result;
@@ -531,15 +529,16 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
 }
 
-static int key_callback_slider(EObjectType cdktype,
+static int key_callback_slider(EObjectType cdktype ,
 	void *object, void *clientData, chtype key)
 {
 	struct aiomixer *x = clientData;
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control = &class->controls[x->control_index];
-	CDKSLIDER *widget = control->value_widget[control->current_chan];
+	CDKSLIDER *widget = object;
 	int new_value;
 
+	(void)cdktype; /* unused */
 	switch (key) {
 	case KEY_UP:
 		if (control->current_chan > 0) {
@@ -588,8 +587,10 @@ static int key_callback_class_buttons(EObjectType cdktype,
 {
 	struct aiomixer *x = clientData;
 
+	(void)cdktype; /* unused */
+	(void)object; /* unused */
 	switch (key) {
-	case '\e':
+	case 0x1b: /* escape */
 		quit(x);
 		break;
 	case KEY_UP:
@@ -617,14 +618,10 @@ static int key_callback_control_buttons(EObjectType cdktype,
 	struct aiomixer *x = clientData;
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control = &class->controls[x->control_index];
-	CDKBUTTONBOX *widget = NULL;
+	CDKBUTTONBOX *widget = object;
 	int current;
 
-	if (control->type == AUDIO_MIXER_SET) {
-		widget = control->set_widget;
-	} else if (control->type == AUDIO_MIXER_ENUM) {
-		widget = control->enum_widget;
-	}
+	(void)cdktype; /* unused */
 	current = getCDKButtonboxCurrentButton(widget);
 	switch (key) {
 	case KEY_UP:
@@ -658,6 +655,8 @@ static int key_callback_global(EObjectType cdktype,
 {
 	struct aiomixer *x = clientData;
 
+	(void)cdktype; /* unused */
+	(void)object; /* unused */
 	if (key > KEY_F0 && key <= (KEY_F0 + x->nclasses + 1)) {
 		key = key - KEY_F0 - 1;
 		destroy_class_widgets(x);
