@@ -427,7 +427,7 @@ destroy_class_widgets(struct aiomixer *x)
 			break;
 		case AUDIO_MIXER_VALUE:
 			for (int j = 0; j < control->v.num_channels; ++j) {
-				destroyCDKButtonbox(control->value_widget[j]);
+				destroyCDKSlider(control->value_widget[j]);
 				control->value_widget[j] = NULL;
 			}
 			break;
