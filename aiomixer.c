@@ -79,6 +79,7 @@ struct aiomixer {
 	unsigned class_index;
 	unsigned control_index;
 	CDKSCREEN *screen;
+	CDKLABEL *title_label;
 	CDKBUTTONBOX *class_buttons;
 	int fd;
 };
@@ -671,7 +672,8 @@ static int key_callback_global(EObjectType cdktype,
 	switch (key) {
 	case KEY_RESIZE:
 		destroy_class_widgets(x);
-		drawCDKButtonboxButtons(x->class_buttons);
+		moveCDKLabel(x->title_label, RIGHT, 0, false, true);
+		drawCDKButtonbox(x->class_buttons, false);
 		create_class_widgets(x, 3);
 		select_class_widget(x, 0);
 		break;
@@ -737,7 +739,7 @@ main(int argc, char *argv[])
 	init_pair(PAIR_SLIDER, COLOR_GREEN, COLOR_BLACK);
 	init_pair(PAIR_ENUM_SET, COLOR_YELLOW, COLOR_BLACK);
 
-	drawCDKLabel(newCDKLabel(x.screen, RIGHT, 0, title, 1, false, false), false);
+	x.title_label = newCDKLabel(x.screen, RIGHT, 0, title, 1, false, false);
 
 	x.class_buttons = newCDKButtonbox(x.screen, 0, 0,
 		2, sum_str_list_lengths((const char **)class_names, x.nclasses) + 10 + x.nclasses,
@@ -746,6 +748,7 @@ main(int argc, char *argv[])
 		COLOR_PAIR(PAIR_CLASS_BUTTONS_HL), false, false);
 	free(class_names);
 
+	drawCDKLabel(x.title_label, false);
 	drawCDKButtonbox(x.class_buttons, false);
 
 	add_class_button_binds(&x, x.class_buttons);
