@@ -111,6 +111,8 @@ static void add_control_button_binds(struct aiomixer *, void *);
 static void add_global_binds(struct aiomixer *, EObjectType, void *);
 static void usage(void);
 static void quit(struct aiomixer *);
+static void quit_err(struct aiomixer *, const char *, ...);
+static void quit_perror(struct aiomixer *);
 
 static struct aiomixer_class *
 aiomixer_get_class(struct aiomixer *x, int class_id)
@@ -361,11 +363,14 @@ create_class_widgets(struct aiomixer *x, int y)
 					label, 1, control->e.num_mem,
 					list, control->e.num_mem,
 					COLOR_PAIR(PAIR_ENUM_SET) | A_BOLD, false, false);
+				if (control->enum_widget == NULL) {
+					quit_err(x, "Couldn't create enum control");
+				}
 				enum_get_and_select(x->fd, control);
 				add_control_button_binds(x, control->enum_widget);
 				drawCDKButtonbox(control->enum_widget, false);
 			} else {
-				control->enum_widget = NULL;
+				quit_perror(x);
 			}
 			free(list);
 			y += 3;
@@ -380,11 +385,14 @@ create_class_widgets(struct aiomixer *x, int y)
 					label, 1, control->s.num_mem,
 					list, control->s.num_mem,
 					COLOR_PAIR(PAIR_ENUM_SET) | A_BOLD, false, false);
+				if (control->set_widget == NULL) {
+					quit_err(x, "Couldn't create set control");
+				}
 				set_get_and_select(x->fd, control);
 				add_control_button_binds(x, control->set_widget);
 				drawCDKButtonbox(control->set_widget, false);
 			} else {
-				control->set_widget = NULL;
+				quit_perror(x);
 			}
 			free(list);
 			y += 3;
@@ -398,6 +406,9 @@ create_class_widgets(struct aiomixer *x, int y)
 					0, 50, 0, 255,
 					control->v.delta, control->v.delta * 2,
 					false, false);
+				if (control->value_widget[chan] == NULL) {
+					quit_err(x, "Couldn't create slider");
+				}
 				add_slider_binds(x, control->value_widget[chan]);
 				y += 3;
 			}
@@ -694,6 +705,30 @@ usage(void)
 }
 
 static void
+quit_err(struct aiomixer *x, const char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+	destroyCDKScreen(x->screen);
+	endCDK();
+	close(x->fd);
+	exit(1);
+}
+
+static void
+quit_perror(struct aiomixer *x)
+{
+	perror("aiomixer");
+	destroyCDKScreen(x->screen);
+	endCDK();
+	close(x->fd);
+	exit(1);
+}
+
+static void
 quit(struct aiomixer *x)
 {
 	destroyCDKScreen(x->screen);
@@ -707,6 +742,7 @@ main(int argc, char *argv[])
 {
 	struct aiomixer x = {0};
 	char *title[] = { "AudioIO Mixer" };
+	char **class_names;
 	char *mixer_device = DEFAULT_MIXER_DEVICE;
 	int ch;
 	extern char *optarg;
@@ -732,7 +768,9 @@ main(int argc, char *argv[])
 
 	aiomixer_devinfo(&x);
 
-	char **class_names = calloc(sizeof(char *), x.nclasses);
+	if ((class_names = calloc(sizeof(char *), x.nclasses)) == NULL) {
+		quit_perror(&x);
+	}
 	for (unsigned i = 0; i < x.nclasses; ++i) {
 		class_names[i] = x.classes[i].name;
 	}
@@ -745,12 +783,18 @@ main(int argc, char *argv[])
 	init_pair(PAIR_ENUM_SET, COLOR_YELLOW, COLOR_BLACK);
 
 	x.title_label = newCDKLabel(x.screen, RIGHT, 0, title, 1, false, false);
+    	if (x.title_label == NULL) {
+		quit_err(&x, "Couldn't create title");
+	}
 
 	x.class_buttons = newCDKButtonbox(x.screen, 0, 0,
 		2, sum_str_list_lengths((const char **)class_names, x.nclasses) + 10 + x.nclasses,
 		"</B/56>Classes<!56>", 1, x.nclasses,
 		class_names, x.nclasses,
 		COLOR_PAIR(PAIR_CLASS_BUTTONS_HL), false, false);
+    	if (x.class_buttons == NULL) {
+		quit_err(&x, "Couldn't create class buttons");
+	}
 	free(class_names);
 
 	drawCDKLabel(x.title_label, false);
