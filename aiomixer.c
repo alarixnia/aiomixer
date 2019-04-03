@@ -69,6 +69,7 @@ struct aiomixer_control {
 struct aiomixer_class {
 	char name[MAX_AUDIO_DEV_LEN];
 	int id;
+	CDKLABEL *heading_label;
 	unsigned ncontrols;
 	struct aiomixer_control controls[MAX_CONTROLS];
 };
@@ -343,7 +344,8 @@ create_class_widgets(struct aiomixer *x, int y)
 	int width;
 	char *title[] = { "</B/56>Controls<!56>" };
 
-	drawCDKLabel(newCDKLabel(x->screen, 0, y, title, 1, false, false), false);
+	class->heading_label = newCDKLabel(x->screen, 0, y, title, 1, false, false);
+	drawCDKLabel(class->heading_label, false);
 	y += 2;
 
 	for (i = 0; i < class->ncontrols; ++i) {
@@ -414,6 +416,9 @@ destroy_class_widgets(struct aiomixer *x)
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control;
 	unsigned i;
+
+	destroyCDKLabel(class->heading_label);
+	class->heading_label = NULL;
 
 	for (i = 0; i < class->ncontrols; ++i) {
 		control = &class->controls[i];
