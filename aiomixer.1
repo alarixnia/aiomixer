@@ -1,0 +1,43 @@
+.Dd April 4, 2019
+.Dt AIOMIXER 1
+.Os
+.Sh NAME
+.Nm aiomixer
+.Nd mixer for
+.Nx
+audio
+.Sh SYNOPSIS
+.Nm aiomixer
+.Op Fl d Ar device
+.Sh DESCRIPTION
+.Nm
+is a frontend for
+.Nx
+mixer devices that runs in your terminal.
+.Pp
+.Nm
+allows controlling audio levels, whether a particular input or
+output is muted, and the current DAC.
+.Pp
+The default mixer device is
+.Pa /dev/mixer .
+The
+.Fl d
+flag can be used to specify an alternative mixer device.
+.Sh USAGE
+.Nm
+is primarily controlled using the cursor keys, e.g. to select a
+control, or change a control's value.
+.Pp
+When the cursor is in the control pane, the Escape key will return
+the cursor to the class selection pane.
+When the cursor is in the class selection pane, pressing the Escape
+key will exit
+.Nm .
+.Pp
+By default, volume levels for individual channels cannot be changed
+separately.
+The channels can be unlocked and re-locked using the U key.
+.Sh SEE ALSO
+.Xr mixerctl 1 ,
+.Xr audio 4
