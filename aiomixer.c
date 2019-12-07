@@ -465,7 +465,7 @@ static bool
 control_within_bounds(struct aiomixer *x, unsigned index)
 {
 	struct aiomixer_class *class = &x->classes[x->class_index];
-	int max_y = getmaxy(x->screen->window);
+	int max_y = getmaxy(x->screen->window) - 3;
 	int y = 5;
 
 	if (index < x->top_control) {
@@ -479,7 +479,7 @@ control_within_bounds(struct aiomixer *x, unsigned index)
 			y += 3;
 			break;
 		case AUDIO_MIXER_VALUE:
-			y += 3 * class->controls[i].v.num_channels;
+			y += (3 * class->controls[i].v.num_channels);
 			break;
 		}
 		if (y >= max_y) return false;
@@ -493,8 +493,7 @@ reposition_visible_widgets(struct aiomixer *x)
 {
 	struct aiomixer_control *control;
 	struct aiomixer_class *class = &x->classes[x->class_index];
-	unsigned max_control = 0;
-	int max_y = getmaxy(x->screen->window) - 5;
+	unsigned max_control = class->ncontrols;
 	int y = 5;
 
 	for (unsigned i = 0; i < class->ncontrols; ++i) {
@@ -518,29 +517,26 @@ reposition_visible_widgets(struct aiomixer *x)
 	}
 	for (unsigned i = x->top_control; i < class->ncontrols; ++i) {
 		control = &class->controls[i];
+		if (!control_within_bounds(x, i)) {
+			max_control = i;
+			break;
+		}
 		switch (control->type) {
 		case AUDIO_MIXER_ENUM:
 			moveCDKButtonbox(control->enum_widget, 0, y, false, false);
 			y += 3;
-			if (y >= max_y) max_control = i;
 			break;
 		case AUDIO_MIXER_SET:
 			moveCDKButtonbox(control->set_widget, 0, y, false, false);
 			y += 3;
-			if (y >= max_y) max_control = i;
 			break;
 		case AUDIO_MIXER_VALUE:
-			if (y + (3 * control->v.num_channels) < max_y) {
-				for (int j = 0; j < control->v.num_channels; ++j) {
-					moveCDKSlider(control->value_widget[j], 0, y, false, false);
-					y += 3;
-				}
-			} else {
-				max_control = i;
+			for (int j = 0; j < control->v.num_channels; ++j) {
+				moveCDKSlider(control->value_widget[j], 0, y, false, false);
+				y += 3;
 			}
 			break;
 		}
-		if (max_control != 0) break;
 	}
 	for (unsigned i = x->top_control; i < max_control; ++i) {
 		control = &class->controls[i];
@@ -586,8 +582,10 @@ select_class_widget(struct aiomixer *x, int index)
 		x->top_control = index;
 		reposition = true;
 	}
-	while (x->top_control < x->control_index && !control_within_bounds(x, x->control_index)) {
-		x->top_control++;
+	if (x->top_control < x->control_index) {
+		while (!control_within_bounds(x, x->control_index)) {
+			x->top_control += 1;
+		}
 		reposition = true;
 	}
 	if (reposition) {
