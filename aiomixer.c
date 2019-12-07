@@ -865,7 +865,7 @@ int
 main(int argc, char *argv[])
 {
 	struct aiomixer x = {0};
-	char *title[] = { "AudioIO Mixer" };
+	char *title[] = { "NetBSD Audio Mixer" };
 	char **class_names;
 	char *mixer_device = DEFAULT_MIXER_DEVICE;
 	int ch;
