@@ -479,7 +479,7 @@ control_within_bounds(struct aiomixer *x, unsigned index)
 			y += 3;
 			break;
 		case AUDIO_MIXER_VALUE:
-			y += 3 * class->controls[i].v.num_channels;;
+			y += 3 * class->controls[i].v.num_channels;
 			break;
 		}
 		if (y >= max_y) return false;
