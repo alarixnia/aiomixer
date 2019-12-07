@@ -79,6 +79,7 @@ struct aiomixer {
 	struct aiomixer_class classes[MAX_CLASSES];
 	unsigned class_index;
 	unsigned control_index;
+	unsigned top_control;
 	CDKSCREEN *screen;
 	CDKLABEL *title_label;
 	CDKBUTTONBOX *class_buttons;
@@ -345,6 +346,7 @@ create_class_widgets(struct aiomixer *x, int y)
 	unsigned i;
 	int width;
 	char *title[] = { "</B/56>Controls<!56>" };
+	int max_y = getmaxy(x->screen->window) - y - 3;
 
 	class->heading_label = newCDKLabel(x->screen, 0, y, title, 1, false, false);
 	drawCDKLabel(class->heading_label, false);
@@ -368,7 +370,9 @@ create_class_widgets(struct aiomixer *x, int y)
 				}
 				enum_get_and_select(x->fd, control);
 				add_control_button_binds(x, control->enum_widget);
-				drawCDKButtonbox(control->enum_widget, false);
+				if (y < max_y) {
+					drawCDKButtonbox(control->enum_widget, false);
+				}
 			} else {
 				quit_perror(x);
 			}
@@ -390,7 +394,9 @@ create_class_widgets(struct aiomixer *x, int y)
 				}
 				set_get_and_select(x->fd, control);
 				add_control_button_binds(x, control->set_widget);
-				drawCDKButtonbox(control->set_widget, false);
+				if (y < max_y) {
+					drawCDKButtonbox(control->set_widget, false);
+				}
 			} else {
 				quit_perror(x);
 			}
@@ -412,9 +418,13 @@ create_class_widgets(struct aiomixer *x, int y)
 				add_slider_binds(x, control->value_widget[chan]);
 				y += 3;
 			}
+			y -= 3 * control->v.num_channels;
 			levels_get_and_set(x->fd, control);
 			for (int chan = 0; chan < control->v.num_channels; ++chan) {
-				drawCDKSlider(control->value_widget[chan], false);
+				if (y < max_y) {
+					drawCDKSlider(control->value_widget[chan], false);
+				}
+				y += 3;
 			}
 			break;
 		}
@@ -426,12 +436,11 @@ destroy_class_widgets(struct aiomixer *x)
 {
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control;
-	unsigned i;
 
 	destroyCDKLabel(class->heading_label);
 	class->heading_label = NULL;
 
-	for (i = 0; i < class->ncontrols; ++i) {
+	for (unsigned i = 0; i < class->ncontrols; ++i) {
 		control = &class->controls[i];
 		switch (control->type) {
 		case AUDIO_MIXER_ENUM:
@@ -452,11 +461,115 @@ destroy_class_widgets(struct aiomixer *x)
 	}
 }
 
+static bool
+control_within_bounds(struct aiomixer *x, unsigned index)
+{
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	int max_y = getmaxy(x->screen->window);
+	int y = 5;
+
+	if (index < x->top_control) {
+		return false;
+	}
+
+	for (unsigned i = x->top_control; i < class->ncontrols; ++i) {
+		switch (class->controls[i].type) {
+		case AUDIO_MIXER_ENUM:
+		case AUDIO_MIXER_SET:
+			y += 3;
+			break;
+		case AUDIO_MIXER_VALUE:
+			y += 3 * class->controls[i].v.num_channels;;
+			break;
+		}
+		if (y >= max_y) return false;
+		if (i == index) break;
+	}
+	return true;
+}
+
+static void
+reposition_visible_widgets(struct aiomixer *x)
+{
+	struct aiomixer_control *control;
+	struct aiomixer_class *class = &x->classes[x->class_index];
+	unsigned max_control = 0;
+	int max_y = getmaxy(x->screen->window) - 5;
+	int y = 5;
+
+	for (unsigned i = 0; i < class->ncontrols; ++i) {
+		control = &class->controls[i];
+		switch (control->type) {
+		case AUDIO_MIXER_ENUM:
+			moveCDKButtonbox(control->enum_widget, INT_MAX, INT_MAX, false, false);
+			eraseCDKButtonbox(control->enum_widget);
+			break;
+		case AUDIO_MIXER_SET:
+			moveCDKButtonbox(control->set_widget, INT_MAX, INT_MAX, false, false);
+			eraseCDKButtonbox(control->set_widget);
+			break;
+		case AUDIO_MIXER_VALUE:
+			for (int j = 0; j < control->v.num_channels; ++j) {
+				moveCDKSlider(control->value_widget[j], INT_MAX, INT_MAX, false, false);
+				eraseCDKSlider(control->value_widget[j]);
+			}
+			break;
+		}
+	}
+	for (unsigned i = x->top_control; i < class->ncontrols; ++i) {
+		control = &class->controls[i];
+		switch (control->type) {
+		case AUDIO_MIXER_ENUM:
+			moveCDKButtonbox(control->enum_widget, 0, y, false, false);
+			y += 3;
+			if (y >= max_y) max_control = i;
+			break;
+		case AUDIO_MIXER_SET:
+			moveCDKButtonbox(control->set_widget, 0, y, false, false);
+			y += 3;
+			if (y >= max_y) max_control = i;
+			break;
+		case AUDIO_MIXER_VALUE:
+			if (y + (3 * control->v.num_channels) < max_y) {
+				for (int j = 0; j < control->v.num_channels; ++j) {
+					moveCDKSlider(control->value_widget[j], 0, y, false, false);
+					y += 3;
+				}
+			} else {
+				max_control = i;
+			}
+			break;
+		}
+		if (max_control != 0) break;
+	}
+	for (unsigned i = x->top_control; i < max_control; ++i) {
+		control = &class->controls[i];
+		switch (control->type) {
+		case AUDIO_MIXER_ENUM:
+			drawCDKButtonbox(control->enum_widget, false);
+			break;
+		case AUDIO_MIXER_SET:
+			drawCDKButtonbox(control->set_widget, false);
+			break;
+		case AUDIO_MIXER_VALUE:
+			for (int j = 0; j < control->v.num_channels; ++j) {
+				drawCDKSlider(control->value_widget[j], false);
+			}
+			break;
+		}
+	}
+	/* XXX moving any widgets seems to mess up things */
+	drawCDKLabel(x->title_label, false);
+	drawCDKLabel(class->heading_label, false);
+	drawCDKButtonbox(x->class_buttons, false);
+}
+
 static void
 select_class_widget(struct aiomixer *x, int index)
 {
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control;
+	bool reposition = false;
 	int result;
 
 	if (index < 0 || class->ncontrols < 1) {
@@ -469,6 +582,17 @@ select_class_widget(struct aiomixer *x, int index)
 	}
 	control = &class->controls[index];
 	x->control_index = index;
+	if (x->top_control > x->control_index) {
+		x->top_control = index;
+		reposition = true;
+	}
+	while (x->top_control < x->control_index && !control_within_bounds(x, x->control_index)) {
+		x->top_control++;
+		reposition = true;
+	}
+	if (reposition) {
+		reposition_visible_widgets(x);
+	}
 	switch (control->type) {
 	case AUDIO_MIXER_ENUM:
 		enum_get_and_select(x->fd, control);
