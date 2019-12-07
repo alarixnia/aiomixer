@@ -339,7 +339,7 @@ add_control_button_binds(struct aiomixer *x, void *object)
 static void
 create_class_widgets(struct aiomixer *x, int y)
 {
-	char label[32];
+	char label[48];
 	struct aiomixer_class *class = &x->classes[x->class_index];
 	struct aiomixer_control *control;
 	char **list;
