@@ -93,6 +93,8 @@ static void aiomixer_devinfo(struct aiomixer *);
 static char **make_enum_list(struct audio_mixer_enum *);
 static char **make_set_list(struct audio_mixer_set *);
 static size_t sum_str_list_lengths(const char **, size_t);
+static bool control_within_bounds(struct aiomixer *, unsigned);
+static void reposition_visible_widgets(struct aiomixer *);
 static void create_class_widgets(struct aiomixer *, int);
 static void destroy_class_widgets(struct aiomixer *);
 static void enum_get_and_select(int, struct aiomixer_control *);
