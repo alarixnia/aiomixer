@@ -25,3 +25,8 @@ evolved separately, and I believe the mixer API is incompatible.
 
 It allows you to select the primary port. For example, on a laptop, it can
 control whether audio is exclusively output to speakers, headphones, or both.
+
+**Q: How do I control USB audio volume, or a secondary sound card?**
+
+Your device is likely available as a secondary mixer device - try
+`aiomixer -d /dev/mixer1`
