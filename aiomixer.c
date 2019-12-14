@@ -312,6 +312,10 @@ add_directional_binds(struct aiomixer *x, EObjectType type, void *object, BINDFN
 	bindCDKObject(type, object, KEY_DOWN, fn, x);
 	bindCDKObject(type, object, KEY_LEFT, fn, x);
 	bindCDKObject(type, object, KEY_RIGHT, fn, x);
+	bindCDKObject(type, object, 'h', fn, x);
+	bindCDKObject(type, object, 'j', fn, x);
+	bindCDKObject(type, object, 'k', fn, x);
+	bindCDKObject(type, object, 'l', fn, x);
 }
 
 static void
@@ -682,6 +686,7 @@ static int key_callback_slider(EObjectType cdktype ,
 
 	(void)cdktype; /* unused */
 	switch (key) {
+	case 'k':
 	case KEY_UP:
 		if (control->current_chan > 0) {
 			control->current_chan--;
@@ -691,6 +696,7 @@ static int key_callback_slider(EObjectType cdktype ,
 			select_class_widget(x, x->control_index - 1);
 		}
 		break;
+	case 'j':
 	case KEY_DOWN:
 		if (control->current_chan < (control->v.num_channels - 1)) {
 			control->current_chan++;
@@ -700,6 +706,7 @@ static int key_callback_slider(EObjectType cdktype ,
 			select_class_widget(x, x->control_index + 1);
 		}
 		break;
+	case 'h':
 	case KEY_LEFT:
 		new_value = getCDKSliderValue(widget) - control->v.delta;
 		if (new_value < getCDKSliderLowValue(widget)) {
@@ -707,6 +714,7 @@ static int key_callback_slider(EObjectType cdktype ,
 		}
 		set_level(x->fd, control, new_value, control->current_chan);
 		break;
+	case 'l':
 	case KEY_RIGHT:
 		new_value = getCDKSliderValue(widget) + control->v.delta;
 		if (new_value > getCDKSliderHighValue(widget)) {
@@ -735,20 +743,30 @@ static int key_callback_class_buttons(EObjectType cdktype,
 	case 0x1b: /* escape */
 		quit(x);
 		break;
+	case 'k':
 	case KEY_UP:
 		return true;
+	case 'j':
 	case KEY_DOWN:
 		select_class_widget(x, 0);
 		break;
+	case 'h':
 	case KEY_LEFT:
 		destroy_class_widgets(x);
 		x->class_index = (getCDKButtonboxCurrentButton(x->class_buttons) - 1) % x->nclasses;
 		create_class_widgets(x, 3);
+		if (key != KEY_LEFT) {
+			setCDKButtonboxCurrentButton(x->class_buttons, x->class_index);
+		}
 		break;
+	case 'l':
 	case KEY_RIGHT:
 		destroy_class_widgets(x);
 		x->class_index = (getCDKButtonboxCurrentButton(x->class_buttons) + 1) % x->nclasses;
 		create_class_widgets(x, 3);
+		if (key != KEY_RIGHT) {
+			setCDKButtonboxCurrentButton(x->class_buttons, x->class_index);
+		}
 		break;
 	}
 	return false;
@@ -766,12 +784,15 @@ static int key_callback_control_buttons(EObjectType cdktype,
 	(void)cdktype; /* unused */
 	current = getCDKButtonboxCurrentButton(widget);
 	switch (key) {
+	case 'k':
 	case KEY_UP:
 		select_class_widget(x, x->control_index - 1);
 		break;
+	case 'j':
 	case KEY_DOWN:
 		select_class_widget(x, x->control_index + 1);
 		break;
+	case 'h':
 	case KEY_LEFT:
 		current = (current - 1) % getCDKButtonboxButtonCount(widget);
 		if (control->type == AUDIO_MIXER_SET) {
@@ -779,13 +800,20 @@ static int key_callback_control_buttons(EObjectType cdktype,
 		} else if (control->type == AUDIO_MIXER_ENUM) {
 			set_enum(x->fd, control->dev, control->e.member[current].ord);
 		}
+		if (key != KEY_LEFT) {
+			setCDKButtonboxCurrentButton(widget, current);
+		}
 		break;
+	case 'l':
 	case KEY_RIGHT:
 		current = (current + 1) % getCDKButtonboxButtonCount(widget);
 		if (control->type == AUDIO_MIXER_SET) {
 			set_set(x->fd, control->dev, control->s.member[current].mask);
 		} else if (control->type == AUDIO_MIXER_ENUM) {
 			set_enum(x->fd, control->dev, control->e.member[current].ord);
+		}
+		if (key != KEY_RIGHT) {
+			setCDKButtonboxCurrentButton(widget, current);
 		}
 		break;
 	}
