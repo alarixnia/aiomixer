@@ -298,7 +298,10 @@ enum_get_and_select(int fd, struct aiomixer_control *control)
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_ENUM;
 
-	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
+	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		return;
+	}
 
 	for (int i = 0; i < control->e.num_mem; ++i) {
 		if (control->e.member[i].ord == dev.un.ord) {
@@ -316,7 +319,10 @@ set_get_and_select(int fd, struct aiomixer_control *control)
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_SET;
 
-	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
+	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		return;
+	}
 
 	for (int i = 0; i < control->s.num_mem; ++i) {
 		if (control->s.member[i].mask == dev.un.mask) {
@@ -333,7 +339,10 @@ levels_get_and_set(int fd, struct aiomixer_control *control)
 
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_VALUE;
-	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
+	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		return;
+	}
 	for (int chan = 0; chan < control->v.num_channels; ++chan) {
 		setCDKSliderValue(control->value_widget[chan],
 			dev.un.value.level[chan]);
@@ -348,7 +357,10 @@ set_enum(int fd, int dev_id, int ord)
 	dev.dev = dev_id;
 	dev.type = AUDIO_MIXER_ENUM;
 	dev.un.ord = ord;
-	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
+
+	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+	}
 }
 
 static void
@@ -359,7 +371,10 @@ set_set(int fd, int dev_id, int mask)
 	dev.dev = dev_id;
 	dev.type = AUDIO_MIXER_SET;
 	dev.un.mask = mask;
-	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
+
+	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+	}
 }
 
 static void 
@@ -735,13 +750,19 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 			drawCDKSlider(control->value_widget[i], false);
 		}
 	} else {
-		(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
+		if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
+			fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+			return;
+		}
 		dev.un.value.level[channel] = level;
 		setCDKSliderValue(control->value_widget[channel], level);
 		drawCDKSlider(control->value_widget[channel], false);
 	}
 
-	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
+	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+		return;
+	}
 }
 
 static int key_callback_slider(EObjectType cdktype ,
