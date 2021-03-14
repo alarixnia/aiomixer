@@ -296,6 +296,7 @@ enum_get_and_select(int fd, struct aiomixer_control *control)
 	mixer_ctrl_t dev = {0};
 
 	dev.dev = control->dev;
+	dev.type = AUDIO_MIXER_ENUM;
 
 	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
 
@@ -313,6 +314,7 @@ set_get_and_select(int fd, struct aiomixer_control *control)
 	mixer_ctrl_t dev = {0};
 
 	dev.dev = control->dev;
+	dev.type = AUDIO_MIXER_SET;
 
 	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
 
@@ -330,6 +332,7 @@ levels_get_and_set(int fd, struct aiomixer_control *control)
 	mixer_ctrl_t dev = {0};
 
 	dev.dev = control->dev;
+	dev.type = AUDIO_MIXER_VALUE;
 	(void)ioctl(fd, AUDIO_MIXER_READ, &dev);
 	for (int chan = 0; chan < control->v.num_channels; ++chan) {
 		setCDKSliderValue(control->value_widget[chan],
@@ -343,6 +346,7 @@ set_enum(int fd, int dev_id, int ord)
 	mixer_ctrl_t dev = {0};
 
 	dev.dev = dev_id;
+	dev.type = AUDIO_MIXER_ENUM;
 	dev.un.ord = ord;
 	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
 }
@@ -353,6 +357,7 @@ set_set(int fd, int dev_id, int mask)
 	mixer_ctrl_t dev = {0};
 
 	dev.dev = dev_id;
+	dev.type = AUDIO_MIXER_SET;
 	dev.un.mask = mask;
 	(void)ioctl(fd, AUDIO_MIXER_WRITE, &dev);
 }
@@ -721,6 +726,7 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 	int i;
 
 	dev.dev = control->dev;
+	dev.type = AUDIO_MIXER_VALUE;
 
 	if (!control->chans_unlocked) {
 		for (i = 0; i < control->v.num_channels; ++i) {
