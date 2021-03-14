@@ -42,7 +42,7 @@
 #define MAX_CONTROLS	(64)
 #define MAX_CLASSES	(16)
 
-#define MAX_CONTROL_LEN	(16)
+#define MAX_CONTROL_LEN	(64)
 
 #define PAIR_CLASS_BUTTONS_HL	(2)
 #define PAIR_SLIDER		(3)
@@ -89,6 +89,7 @@ struct aiomixer {
 static void select_class(struct aiomixer *);
 static void select_class_widget(struct aiomixer *, int);
 static struct aiomixer_class *aiomixer_get_class(struct aiomixer *, int);
+static struct aiomixer_control *aiomixer_get_control(struct aiomixer_class *, int);
 static void aiomixer_devinfo(struct aiomixer *);
 static char **make_enum_list(struct audio_mixer_enum *);
 static char **make_set_list(struct audio_mixer_set *);
@@ -128,32 +129,52 @@ aiomixer_get_class(struct aiomixer *x, int class_id)
 	return NULL;
 }
 
+static struct aiomixer_control *
+aiomixer_get_control(struct aiomixer_class *c, int dev)
+{
+	for (unsigned i = 0; i < c->ncontrols; ++i) {
+		if (c->controls[i].dev == dev) {
+			return &c->controls[i];
+		}
+	}
+	return NULL;
+}
+
 static void
 aiomixer_devinfo(struct aiomixer *x)
 {
 	struct mixer_devinfo m = {0};
 	struct aiomixer_class *class = NULL;
 	struct aiomixer_control *control = NULL;
+	struct aiomixer_control *prev_ctrl = NULL;
 	struct audio_mixer_enum e;
 	struct audio_mixer_set s;
 	struct audio_mixer_value v;
 	int i;
 
 	for (m.index = 0; ioctl(x->fd, AUDIO_MIXER_DEVINFO, &m) != -1; ++m.index) {
+		if (m.type == AUDIO_MIXER_CLASS && x->nclasses < MAX_CLASSES) {
+			class = &x->classes[x->nclasses++];
+			class->id = m.mixer_class;
+			memcpy(class->name, m.label.name, MAX_AUDIO_DEV_LEN);
+		}
+	}
+	for (m.index = 0; ioctl(x->fd, AUDIO_MIXER_DEVINFO, &m) != -1; ++m.index) {
 		switch (m.type) {
-		case AUDIO_MIXER_CLASS:
-			if (x->nclasses < MAX_CLASSES) {
-				class = &x->classes[x->nclasses++];
-				class->id = m.mixer_class;
-				memcpy(class->name, m.label.name, MAX_AUDIO_DEV_LEN);
-			}
-			break;
 		case AUDIO_MIXER_ENUM:
 			e = m.un.e;
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
+					prev_ctrl = aiomixer_get_control(class, m.prev);
+					if (prev_ctrl != NULL) {
+						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						    prev_ctrl->name, m.label.name);
+					}
+				} else {
+					memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				}
 				control->type = AUDIO_MIXER_ENUM;
 				control->dev = m.index;
 				control->e.num_mem = e.num_mem;
@@ -168,7 +189,15 @@ aiomixer_devinfo(struct aiomixer *x)
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
+					prev_ctrl = aiomixer_get_control(class, m.prev);
+					if (prev_ctrl != NULL) {
+						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						    prev_ctrl->name, m.label.name);
+					}
+				} else {
+					memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				}
 				control->type = AUDIO_MIXER_SET;
 				control->dev = m.index;
 				control->s.num_mem = s.num_mem;
@@ -183,11 +212,19 @@ aiomixer_devinfo(struct aiomixer *x)
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
+					prev_ctrl = aiomixer_get_control(class, m.prev);
+					if (prev_ctrl != NULL) {
+						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						    prev_ctrl->name, m.label.name);
+					}
+				} else {
+					memcpy(control->name, m.label.name, MAX_AUDIO_DEV_LEN);
+				}
 				control->type = AUDIO_MIXER_VALUE;
 				control->dev = m.index;
 				control->v.num_channels = v.num_channels;
-				control->v.delta = v.delta;
+				control->v.delta = v.delta ? v.delta : 8;
 			}
 			break;
 		}
