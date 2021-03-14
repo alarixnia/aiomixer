@@ -299,7 +299,8 @@ enum_get_and_select(int fd, struct aiomixer_control *control)
 	dev.type = AUDIO_MIXER_ENUM;
 
 	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ %d failed: %s\n",
+		    dev.dev, strerror(errno));
 		return;
 	}
 
@@ -320,7 +321,9 @@ set_get_and_select(int fd, struct aiomixer_control *control)
 	dev.type = AUDIO_MIXER_SET;
 
 	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		fprintf(stderr,
+		    "aiomixer: AUDIO_MIXER_READ %d failed: %s\n",
+		    dev.dev, strerror(errno));
 		return;
 	}
 
@@ -340,7 +343,8 @@ levels_get_and_set(int fd, struct aiomixer_control *control)
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_VALUE;
 	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ %d failed: %s\n",
+		    dev.dev, strerror(errno));
 		return;
 	}
 	for (int chan = 0; chan < control->v.num_channels; ++chan) {
@@ -359,7 +363,8 @@ set_enum(int fd, int dev_id, int ord)
 	dev.un.ord = ord;
 
 	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE %d failed: %s\n",
+		    dev.dev, strerror(errno));
 	}
 }
 
@@ -373,7 +378,8 @@ set_set(int fd, int dev_id, int mask)
 	dev.un.mask = mask;
 
 	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE %d failed: %s\n",
+		    dev.dev, strerror(errno));
 	}
 }
 
@@ -751,7 +757,8 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 		}
 	} else {
 		if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
-			fprintf(stderr, "aiomixer: AUDIO_MIXER_READ failed: %s\n", strerror(errno));
+			fprintf(stderr, "aiomixer: AUDIO_MIXER_READ %d failed: %s\n",
+			    dev.dev, strerror(errno));
 			return;
 		}
 		dev.un.value.level[channel] = level;
@@ -760,7 +767,8 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 	}
 
 	if (ioctl(fd, AUDIO_MIXER_WRITE, &dev) < 0) {
-		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE failed: %s\n", strerror(errno));
+		fprintf(stderr, "aiomixer: AUDIO_MIXER_WRITE %d failed: %s\n",
+		    dev.dev, strerror(errno));
 		return;
 	}
 }
