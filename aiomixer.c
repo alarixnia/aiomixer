@@ -52,6 +52,7 @@ struct aiomixer_control {
 	char name[MAX_CONTROL_LEN];
 	int dev;
 	int type;
+	int next, prev;
 	int current_chan; /* for VALUE type */
 	bool chans_unlocked; /* for VALUE type */
 	union {
@@ -89,8 +90,9 @@ struct aiomixer {
 static void select_class(struct aiomixer *);
 static void select_class_widget(struct aiomixer *, int);
 static struct aiomixer_class *aiomixer_get_class(struct aiomixer *, int);
-static struct aiomixer_control *aiomixer_get_control(struct aiomixer_class *, int);
+static struct aiomixer_control *aiomixer_get_control(struct aiomixer *, int);
 static void aiomixer_devinfo(struct aiomixer *);
+static struct aiomixer_control *find_root_control(struct aiomixer *, int);
 static char **make_enum_list(struct audio_mixer_enum *);
 static char **make_set_list(struct audio_mixer_set *);
 static size_t sum_str_list_lengths(const char **, size_t);
@@ -130,14 +132,32 @@ aiomixer_get_class(struct aiomixer *x, int class_id)
 }
 
 static struct aiomixer_control *
-aiomixer_get_control(struct aiomixer_class *c, int dev)
+aiomixer_get_control(struct aiomixer *x, int dev)
 {
-	for (unsigned i = 0; i < c->ncontrols; ++i) {
-		if (c->controls[i].dev == dev) {
-			return &c->controls[i];
+	unsigned i, j;
+	struct aiomixer_class *class;
+
+	for (i = 0; i < x->nclasses; ++i) {
+		class = &x->classes[i];
+		for (j = 0; j < class->ncontrols; ++j) {
+			if (class->controls[j].dev == dev) {
+				return &class->controls[j];
+			}
 		}
 	}
 	return NULL;
+}
+
+static struct aiomixer_control *
+find_root_control(struct aiomixer *x, int dev)
+{
+	struct aiomixer_control *ctrl;
+
+	ctrl = aiomixer_get_control(x, dev);
+	while (ctrl->prev != -1) {
+		ctrl = aiomixer_get_control(x, ctrl->prev);
+	}
+	return ctrl;
 }
 
 static void
@@ -166,8 +186,8 @@ aiomixer_devinfo(struct aiomixer *x)
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
-					prev_ctrl = aiomixer_get_control(class, m.prev);
+				if (m.prev != -1) {
+					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
 						snprintf(control->name, sizeof(control->name), "%s.%s\n",
 						    prev_ctrl->name, m.label.name);
@@ -177,6 +197,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				}
 				control->type = AUDIO_MIXER_ENUM;
 				control->dev = m.index;
+				control->next = m.next;
+				control->prev = m.prev;
 				control->e.num_mem = e.num_mem;
 				for (i = 0; i < e.num_mem; ++i) {
 					control->e.member[i].label = e.member[i].label;
@@ -189,8 +211,8 @@ aiomixer_devinfo(struct aiomixer *x)
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
-					prev_ctrl = aiomixer_get_control(class, m.prev);
+				if (m.prev != -1) {
+					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
 						snprintf(control->name, sizeof(control->name), "%s.%s\n",
 						    prev_ctrl->name, m.label.name);
@@ -200,6 +222,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				}
 				control->type = AUDIO_MIXER_SET;
 				control->dev = m.index;
+				control->next = m.next;
+				control->prev = m.prev;
 				control->s.num_mem = s.num_mem;
 				for (i = 0; i < s.num_mem; ++i) {
 					control->s.member[i].label = s.member[i].label;
@@ -212,8 +236,8 @@ aiomixer_devinfo(struct aiomixer *x)
 			class = aiomixer_get_class(x, m.mixer_class);
 			if (class != NULL && class->ncontrols < MAX_CONTROLS) {
 				control = &class->controls[class->ncontrols++];
-				if (m.prev != -1 && (unsigned)m.prev < (class->ncontrols - 1)) {
-					prev_ctrl = aiomixer_get_control(class, m.prev);
+				if (m.prev != -1) {
+					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
 						snprintf(control->name, sizeof(control->name), "%s.%s\n",
 						    prev_ctrl->name, m.label.name);
@@ -223,6 +247,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				}
 				control->type = AUDIO_MIXER_VALUE;
 				control->dev = m.index;
+				control->next = m.next;
+				control->prev = m.prev;
 				control->v.num_channels = v.num_channels;
 				control->v.delta = v.delta ? v.delta : 8;
 			}
