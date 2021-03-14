@@ -189,7 +189,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				if (m.prev != -1) {
 					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
-						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						snprintf(control->name, sizeof(control->name),
+						    "%.16s.%16s\n",
 						    prev_ctrl->name, m.label.name);
 					}
 				} else {
@@ -214,7 +215,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				if (m.prev != -1) {
 					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
-						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						snprintf(control->name, sizeof(control->name),
+						    "%.16s.%.16s\n",
 						    prev_ctrl->name, m.label.name);
 					}
 				} else {
@@ -239,7 +241,8 @@ aiomixer_devinfo(struct aiomixer *x)
 				if (m.prev != -1) {
 					prev_ctrl = find_root_control(x, m.prev);
 					if (prev_ctrl != NULL) {
-						snprintf(control->name, sizeof(control->name), "%s.%s\n",
+						snprintf(control->name, sizeof(control->name),
+						    "%.16s.%16s\n",
 						    prev_ctrl->name, m.label.name);
 					}
 				} else {
