@@ -342,6 +342,8 @@ levels_get_and_set(int fd, struct aiomixer_control *control)
 
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_VALUE;
+	dev.un.value.num_channels = control->v.num_channels;
+
 	if (ioctl(fd, AUDIO_MIXER_READ, &dev) < 0) {
 		fprintf(stderr, "aiomixer: AUDIO_MIXER_READ %d failed: %s\n",
 		    dev.dev, strerror(errno));
@@ -748,6 +750,7 @@ set_level(int fd, struct aiomixer_control *control, int level, int channel)
 
 	dev.dev = control->dev;
 	dev.type = AUDIO_MIXER_VALUE;
+	dev.un.value.num_channels = control->v.num_channels;
 
 	if (!control->chans_unlocked) {
 		for (i = 0; i < control->v.num_channels; ++i) {
